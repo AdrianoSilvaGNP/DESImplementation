@@ -1,6 +1,6 @@
 # DESImplementation
 
-An implementation of a the Data Encryption Standard algorithm in Kotlin
+An implementation of the Data Encryption Standard algorithm in Kotlin
 
 # References
 
