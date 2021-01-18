@@ -21,24 +21,23 @@ fun main() {
     // run 16 DES Rounds (encrypt)
     val encryptionResult = DESRounds(dataBitSets, subKeys)
 
-    var encryptedText = ""
-
-    encryptionResult.forEach {
-        // create bit array for each group
-        var binary = String()
-        for (j in 0..63) {
-            binary += (if (it[j]) "1" else "0")
-        }
-        encryptedText += binary
-    }
+    val encryptedText = encryptionResult.toBinaryString()
 
     println(encryptedText)
 
-    subKeys.reverse()
+    subKeys.reverse(1, 16)
+
     val decryptionResult = DESRounds(encryptionResult, subKeys)
 
-    val decryptedString = decryptionResult.toDecryptedString()
+    val decryptedBinaryString = decryptionResult.toBinaryString()
 
+    var byteArray = decryptedBinaryString.fromBinaryToByteArrayBigEndian(decryptedBinaryString.length / 8)
+
+    val resultText = byteArray.toString(Charsets.UTF_8)
+
+    //byteArray.toString(Charsets.UTF_8)
+
+    val teste =""
     // 8*8 = 64 bits data
     /*if (byteArray.size <= 8) {
         var st = ""
@@ -102,12 +101,34 @@ private fun String.toBitSets(iskey: Boolean = false): ArrayList<BitSet> {
 
 }
 
-private fun ArrayList<BitSet>.toDecryptedString(): String {
+private fun ArrayList<BitSet>.toBinaryString(): String {
+    var text = String()
     this.forEach { bitSet ->
-
+        // create bit array for each group
+        var binary = String()
+        for (j in 0..63) {
+            if (j > 0 && j % 8 == 0) {
+                binary += " "
+            }
+            binary += (if (bitSet[j]) "1" else "0")
+        }
+        text += "$binary "
     }
 
-    return ""
+    return text
+}
+
+private fun String.fromBinaryToByteArrayBigEndian(numberOfBytes : Int) : ByteArray {
+    val byteArray = ByteArray(numberOfBytes)
+    for ((counter, i) in (this.indices step 8).withIndex()){
+
+        val currentByte = this.substring(i, i + 8)
+        val value = currentByte.toInt(2)
+
+        //byteArray[counter] = Byte { value }
+    }
+
+    return byteArray
 }
 
 private fun generateSubKeys(K: BitSet): Array<BitSet> {
