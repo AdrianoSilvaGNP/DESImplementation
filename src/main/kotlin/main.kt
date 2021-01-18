@@ -1,12 +1,16 @@
-import java.lang.StringBuilder
 import java.util.*
-import kotlin.experimental.and
 
 fun main() {
 
-    val cleartext = "Text toee"
-    val byteArray = cleartext.toByteArray()
-    cleartext.toBitSet()
+    //val cleartext = "Text to encrypt usign DES"
+    val cleartext = "Text to "
+    val key = "chaveTeste"
+
+    val dataBitSets = cleartext.toBitSets()
+
+    val keyBitSets = key.toBitSets(iskey = true)
+
+    //val ks = generateSubKeys()
 
     // 8*8 = 64 bits data
     /*if (byteArray.size <= 8) {
@@ -25,19 +29,32 @@ fun main() {
 
 }
 
-private fun String.toBitSet() : BitSet {
+private fun String.toBitSets(iskey: Boolean = false) : ArrayList<BitSet> {
 
-    val byteArray = this.toByteArray()
+    val dataBitsList = ArrayList<BitSet>()
+    val byteArray = this.toByteArray(Charsets.UTF_8)
+    val totalBitSet = BitSet.valueOf(byteArray)
 
-    if (byteArray.size > 8) {
+    if (iskey) {
+        dataBitsList.add(totalBitSet[0, 64])
+    } else {
 
-        val datagroups = byteArray.size / 8f
+        // how many 8 byte (64 bit) groups
+        val dataGroups = (byteArray.size + 8 - 1) / 8
 
-        //val secondBA = byteArray.sliceArray(IntRange(9, 16))
-        //val secondBA = byteArray.
+        // separate into 64 bit bitsets
+        for (i in 1..dataGroups) {
+            dataBitsList.add(totalBitSet[(i - 1) * 64, i * 64])
+        }
+
+        // BitSet seems to be big-endian, so this validation will not be necessary
+        /*if (dataBitsList.last().size() < 64) {
+
+        }*/
     }
 
-    val sb = StringBuilder()
+    // old method to convert to bitset (before finding out about BitSet.valueOf())
+    /*val sb = StringBuilder()
     byteArray.forEach { byte ->
         // method get bit values with correct 0 paddings
         sb.append(Integer.toBinaryString((byte.toInt() and 0xFF) + 0x100).substring(1))
@@ -47,8 +64,8 @@ private fun String.toBitSet() : BitSet {
     val bs = BitSet(64)
     for ((i,c) in binary.withIndex()) {
         bs[i] = (c == '1')
-    }
+    }*/
 
-    return bs
+    return dataBitsList
 
 }
