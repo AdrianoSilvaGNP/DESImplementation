@@ -18,7 +18,26 @@ fun main() {
     // generate all subKeys
     val subKeys = generateSubKeys(keyBitSets[0])
 
-    val result = DESRounds(dataBitSets, subKeys)
+    // run 16 DES Rounds (encrypt)
+    val encryptionResult = DESRounds(dataBitSets, subKeys)
+
+    var encryptedText = ""
+
+    encryptionResult.forEach {
+        // create bit array for each group
+        var binary = String()
+        for (j in 0..63) {
+            binary += (if (it[j]) "1" else "0")
+        }
+        encryptedText += binary
+    }
+
+    println(encryptedText)
+
+    subKeys.reverse()
+    val decryptionResult = DESRounds(encryptionResult, subKeys)
+
+    val decryptedString = decryptionResult.toDecryptedString()
 
     // 8*8 = 64 bits data
     /*if (byteArray.size <= 8) {
@@ -29,9 +48,6 @@ fun main() {
         }
         print(st)
     }*/
-
-    //TODO: Implement DES Round including feistel function
-
 }
 
 private fun String.toBitSets(iskey: Boolean = false): ArrayList<BitSet> {
@@ -84,6 +100,14 @@ private fun String.toBitSets(iskey: Boolean = false): ArrayList<BitSet> {
 
     return dataBitsList
 
+}
+
+private fun ArrayList<BitSet>.toDecryptedString(): String {
+    this.forEach { bitSet ->
+
+    }
+
+    return ""
 }
 
 private fun generateSubKeys(K: BitSet): Array<BitSet> {
@@ -182,11 +206,13 @@ private val PC2 = intArrayOf(
     46, 42, 50, 36, 29, 32
 )
 
-private fun DESRounds(dataBitSets: ArrayList<BitSet>, subKeys: Array<BitSet>) {
+private fun DESRounds(dataBitSets: ArrayList<BitSet>, subKeys: Array<BitSet>) : ArrayList<BitSet> {
+    val resultList = ArrayList<BitSet>()
+
     dataBitSets.forEach { message ->
 
-        val IPmessage = BitSet()
         // IP box permutation
+        val IPmessage = BitSet()
         for (i in IP.indices) {
             IPmessage[i] = message[IP[i] - 1]
         }
@@ -206,7 +232,26 @@ private fun DESRounds(dataBitSets: ArrayList<BitSet>, subKeys: Array<BitSet>) {
             R[i] = L[i - 1]
         }
 
+        // join R with L (switch both 32 bit blocks)
+        val RL = BitSet()
+        for (j in 0..63) {
+            if (j < 32) {
+                RL[j] = R[16][j]
+            } else {
+                RL[j] = L[16][j - 32]
+            }
+        }
+
+        // IP box permutation
+        val IP2message = BitSet()
+        for (i in IP2.indices) {
+            IP2message[i] = RL[IP2[i] - 1]
+        }
+
+        resultList.add(IP2message)
     }
+
+    return resultList
 }
 
 private fun feistel(RBitSet: BitSet, subKey: BitSet): BitSet {
@@ -222,18 +267,54 @@ private fun feistel(RBitSet: BitSet, subKey: BitSet): BitSet {
 
     // separate into 6 bit groups
     val B = Array(9) { BitSet() }
-    for (i in 0..47) {
-        for (j in 1..8) {
-            for (k in 0..5) {
-                B[j][k] = ERBitSet[i]
-            }
+    for (j in 0..7) {
+        for (k in 0..5) {
+            B[j + 1][k] = ERBitSet[(j * 6) + k]
         }
     }
 
-    val teste = ""
+    // use S-box to resize 6 bits to 4 bits
+    val S = Array(9) { BitSet() }
+    for (i in 1..8) {
 
-    return ERBitSet
+        // create 6 bit array for each group
+        val binary = IntArray(6)
+        for (j in 0..5) {
+            binary[j] = (if (B[i][j]) 1 else 0)
+        }
 
+        // calcultate row and column
+        val row = binary[0] * 2 + binary[5]
+        val column = binary[1] * 8 + binary[2] * 4 + binary[3] * 2 + binary[4]
+
+        // get S Table Result
+        val SResult = S_TABLE[i - 1][row * 16 + column]
+
+        // convert S Table Result to binary
+        val SResultBin = Integer.toBinaryString(SResult).padStart(4, '0')
+
+        // insert binary into BitSet (Big-Endian)
+        for (k in 0..3) {
+            S[i][k] = (SResultBin[k] == '1')
+        }
+    }
+
+    // Rejoin S results into 32 bit group
+    val SResultBitSet = BitSet()
+    var counter = 0
+    for (j in 1..8) {
+        for (l in 0..3) {
+            SResultBitSet[counter++] = S[j][l]
+        }
+    }
+
+    // P box permutation
+    val feistelResult = BitSet()
+    for (i in P.indices) {
+        feistelResult[i] = SResultBitSet[P[i] - 1]
+    }
+
+    return feistelResult
 }
 
 private val IP = intArrayOf(
@@ -258,7 +339,7 @@ private val E = intArrayOf(
     28, 29, 30, 31, 32, 1
 )
 
-private val S = arrayOf(
+private val S_TABLE = arrayOf(
     intArrayOf(
         14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
         0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8,
@@ -314,4 +395,26 @@ private val S = arrayOf(
         7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8,
         2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11
     )
+)
+
+private val P = intArrayOf(
+    16, 7, 20, 21,
+    29, 12, 28, 17,
+    1, 15, 23, 26,
+    5, 18, 31, 10,
+    2, 8, 24, 14,
+    32, 27, 3, 9,
+    19, 13, 30, 6,
+    22, 11, 4, 25
+)
+
+private val IP2 = intArrayOf(
+    40, 8, 48, 16, 56, 24, 64, 32,
+    39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30,
+    37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28,
+    35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26,
+    33, 1, 41, 9, 49, 17, 57, 25
 )
