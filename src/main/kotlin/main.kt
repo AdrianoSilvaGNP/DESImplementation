@@ -114,7 +114,7 @@ private fun generateSubKeys(K: BitSet): Array<BitSet> {
             if (j < 28) {
                 CDKeys[i][j] = C[i][j]
             } else {
-                CDKeys[i][j + 28] = D[i][j]
+                CDKeys[i][j] = D[i][j - 28]
             }
         }
     }
@@ -128,16 +128,30 @@ private fun generateSubKeys(K: BitSet): Array<BitSet> {
             subKeys[i][j] = CDKeys[i][PC2[j] - 1]
         }
     }
-    
+
     return subKeys;
 }
 
 private fun BitSet.leftShift(shifts: Int, previousBitSet: BitSet) {
+    val tempBitSet = BitSet()
     for (i in 1..shifts) {
-        for (j in 0..26) {
-            this[j] = previousBitSet[j+1]
+
+        if (i > 1) {
+            val temp = tempBitSet[0]
+            for (j in 0..26) {
+                tempBitSet[j] = tempBitSet[j+1]
+            }
+            tempBitSet[27] = temp
+        } else {
+            tempBitSet[27] = previousBitSet[0]
+            for (j in 0..26) {
+                tempBitSet[j] = previousBitSet[j+1]
+            }
         }
-        this[27] = previousBitSet[0]
+    }
+
+    for (i in 0..27) {
+        this[i] = tempBitSet[i]
     }
 }
 
