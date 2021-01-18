@@ -8,6 +8,7 @@ fun main() {
 
     // Algorithm will separate into 64 bit blocks
     val cleartext = "Text to encrypt using DES"
+    //val cleartext = "Text to "
 
     // Algorithm will only use first 64 bits
     val key = "EncryptKey"
@@ -22,22 +23,29 @@ fun main() {
     val encryptionResult = DESRounds(dataBitSets, subKeys)
 
     val encryptedText = encryptionResult.toBinaryString()
-
     println(encryptedText)
 
-    subKeys.reverse(1, 16)
+    // reversing subkeys positions for decryption
+    for (i in 1..8) {
+        val temp = subKeys[i]
+        subKeys[i] = subKeys[17 - i]
+        subKeys[17 - i] = temp
+    }
 
+    //subKeys.reversed()
+    //subKeys.reverse(1, 16)
+
+    // run 16 DES Rounds (decrypt)
     val decryptionResult = DESRounds(encryptionResult, subKeys)
 
     val decryptedBinaryString = decryptionResult.toBinaryString()
 
-    var byteArray = decryptedBinaryString.fromBinaryToByteArrayBigEndian(decryptedBinaryString.length / 8)
+    val byteArray = decryptedBinaryString.fromBinaryToByteArray(numberOfBytes = decryptedBinaryString.length / 8)
 
     val resultText = byteArray.toString(Charsets.UTF_8)
 
-    //byteArray.toString(Charsets.UTF_8)
+    println(resultText)
 
-    val teste =""
     // 8*8 = 64 bits data
     /*if (byteArray.size <= 8) {
         var st = ""
@@ -49,6 +57,10 @@ fun main() {
     }*/
 }
 
+/**
+ * Creates an Array of BitSets
+ * @param iskey is this flag is true, only 1 set of 64 bits will be returned
+ */
 private fun String.toBitSets(iskey: Boolean = false): ArrayList<BitSet> {
 
     val dataBitsList = ArrayList<BitSet>()
@@ -101,36 +113,47 @@ private fun String.toBitSets(iskey: Boolean = false): ArrayList<BitSet> {
 
 }
 
+/**
+ * returns the binary representation in a string of all BitSets contained in the ArrayList
+ */
 private fun ArrayList<BitSet>.toBinaryString(): String {
     var text = String()
     this.forEach { bitSet ->
-        // create bit array for each group
+        // separate bytes
         var binary = String()
         for (j in 0..63) {
-            if (j > 0 && j % 8 == 0) {
+            // to add spaces between bytes
+            /*if (j > 0 && j % 8 == 0) {
                 binary += " "
-            }
+            }*/
             binary += (if (bitSet[j]) "1" else "0")
         }
-        text += "$binary "
+        text += binary //"$binary "
     }
 
     return text
 }
 
-private fun String.fromBinaryToByteArrayBigEndian(numberOfBytes : Int) : ByteArray {
+/**
+ * Separates the binary string representation in bytes and includes them into a ByteArray for easier UTF-8 encoding
+ */
+private fun String.fromBinaryToByteArray(numberOfBytes : Int) : ByteArray {
     val byteArray = ByteArray(numberOfBytes)
     for ((counter, i) in (this.indices step 8).withIndex()){
 
+        // extract 8 bit and get byte value (in decimal)
         val currentByte = this.substring(i, i + 8)
         val value = currentByte.toInt(2)
 
-        //byteArray[counter] = Byte { value }
+        byteArray[counter] = value.toByte()
     }
 
     return byteArray
 }
 
+/**
+ * Generates the 16 SubKeys from the given initial 64 bit Key
+ */
 private fun generateSubKeys(K: BitSet): Array<BitSet> {
 
     // PC-1 key permutation
@@ -180,10 +203,14 @@ private fun generateSubKeys(K: BitSet): Array<BitSet> {
     return subKeys;
 }
 
+/**
+ * Shifts the bits inside the bitSet to the left
+ * @param shifts how many shifts are to be executed
+ */
 private fun BitSet.leftShift(shifts: Int, previousBitSet: BitSet) {
     val tempBitSet = BitSet()
     for (i in 1..shifts) {
-
+        // if there is more than 1 shift we need to use the TempBitSet as previousBitSet
         if (i > 1) {
             val temp = tempBitSet[0]
             for (j in 0..26) {
@@ -227,6 +254,9 @@ private val PC2 = intArrayOf(
     46, 42, 50, 36, 29, 32
 )
 
+/**
+ * DES defined 16 rounds
+ */
 private fun DESRounds(dataBitSets: ArrayList<BitSet>, subKeys: Array<BitSet>) : ArrayList<BitSet> {
     val resultList = ArrayList<BitSet>()
 
@@ -275,6 +305,9 @@ private fun DESRounds(dataBitSets: ArrayList<BitSet>, subKeys: Array<BitSet>) : 
     return resultList
 }
 
+/**
+ * Feistel cypher
+ */
 private fun feistel(RBitSet: BitSet, subKey: BitSet): BitSet {
 
     // R BitSet expansion through E table
